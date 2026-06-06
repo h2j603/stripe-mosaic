@@ -6,6 +6,8 @@ const BROWN = '#775d4f';
 const fileEl = document.getElementById('file');
 const cellEl = document.getElementById('cell');
 const cellv = document.getElementById('cellv');
+const ratioEl = document.getElementById('ratio');
+const ratiov = document.getElementById('ratiov');
 const alphaEl = document.getElementById('alpha');
 const alphav = document.getElementById('alphav');
 const preview = document.getElementById('preview');
@@ -27,6 +29,7 @@ fileEl.addEventListener('change', async (e) => {
   await rebuild();
 });
 cellEl.addEventListener('input', () => { cellv.textContent = cellEl.value; rebuild(); });
+ratioEl.addEventListener('input', () => { ratiov.textContent = (+ratioEl.value).toFixed(2); rebuild(); });
 alphaEl.addEventListener('input', () => { alphav.textContent = alphaEl.value; rebuild(); });
 hoverCb.addEventListener('change', () => {
   app.classList.toggle('hover-effect', hoverCb.checked);
@@ -35,17 +38,18 @@ hoverCb.addEventListener('change', () => {
 async function rebuild() {
   if (!svgText) return;
   const cellPx = parseInt(cellEl.value, 10);
+  const ratio = parseFloat(ratioEl.value);
   const threshold = parseInt(alphaEl.value, 10);
   try {
-    lastGrid = await analyze(svgText, cellPx, threshold);
+    lastGrid = await analyze(svgText, cellPx, ratio, threshold);
     renderPreview(lastGrid);
-    status.textContent = `${lastGrid.cols} × ${lastGrid.rows} grid · ${lastGrid.cells.length} cells filled`;
+    status.textContent = `${lastGrid.cols} × ${lastGrid.rows} grid · ${lastGrid.cells.length} cells filled · ratio ${ratio.toFixed(2)}`;
   } catch (err) {
     status.textContent = '오류: ' + err.message;
   }
 }
 
-async function analyze(svgText, cellPx, alphaThreshold) {
+async function analyze(svgText, cellPx, ratio, alphaThreshold) {
   // SVG 원본 dimension 추출
   const parsed = new DOMParser().parseFromString(svgText, 'image/svg+xml');
   const svgEl = parsed.documentElement;
@@ -82,33 +86,38 @@ async function analyze(svgText, cellPx, alphaThreshold) {
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   URL.revokeObjectURL(url);
 
-  // 셀 그리드 — cellPx는 결과 페이지에서의 px. 여기선 비율로.
-  // 원본 SVG의 cellPx 비율: cellPx / w (한 셀이 SVG width의 몇 분의 1)
-  // canvas 기준 cellPx 픽셀 = (cellPx / w) * canvas.width = cellPx * scale
-  const cellCanvasPx = cellPx * scale;
-  const cols = Math.max(1, Math.floor(canvas.width / cellCanvasPx));
-  const rows = Math.max(1, Math.floor(canvas.height / cellCanvasPx));
+  // 셀 그리드 — cellPx는 결과 페이지에서의 px(가로). 세로 = cellPx / ratio.
+  const cellW = cellPx;
+  const cellH = cellPx / ratio;
+  const cellCanvasW = cellW * scale;
+  const cellCanvasH = cellH * scale;
+  const cols = Math.max(1, Math.floor(canvas.width / cellCanvasW));
+  const rows = Math.max(1, Math.floor(canvas.height / cellCanvasH));
 
   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   const cells = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      // 셀 중심 좌표
-      const cx = Math.floor((c + 0.5) * cellCanvasPx);
-      const cy = Math.floor((r + 0.5) * cellCanvasPx);
+      const cx = Math.floor((c + 0.5) * cellCanvasW);
+      const cy = Math.floor((r + 0.5) * cellCanvasH);
       const idx = (cy * canvas.width + cx) * 4;
       const alpha = data[idx + 3];
       if (alpha >= alphaThreshold) cells.push([r, c]);
     }
   }
-  return { cols, rows, cells, cellPx };
+  return { cols, rows, cells, cellPx, ratio };
+}
+
+function gridAspect(g) {
+  // 가로/세로 = cols * cellW / (rows * cellH) = cols * ratio / rows
+  return (g.cols * g.ratio) / g.rows;
 }
 
 function renderPreview(grid) {
   preview.innerHTML = '';
   preview.style.gridTemplateColumns = `repeat(${grid.cols}, 1fr)`;
   preview.style.gridTemplateRows = `repeat(${grid.rows}, 1fr)`;
-  preview.style.aspectRatio = `${grid.cols} / ${grid.rows}`;
+  preview.style.aspectRatio = `${gridAspect(grid)}`;
   preview.style.width = '100%';
   preview.style.maxWidth = `${Math.min(900, grid.cols * 30)}px`;
   for (const [r, c] of grid.cells) {
@@ -121,9 +130,8 @@ function renderPreview(grid) {
 }
 
 function buildHTML(grid) {
-  // 단일 div + style 인라인. 외부 CSS 의존 없이 어디든 박을 수 있음.
   const lines = [];
-  lines.push(`<div class="stripe-mosaic" style="display:grid;grid-template-columns:repeat(${grid.cols},1fr);grid-template-rows:repeat(${grid.rows},1fr);aspect-ratio:${grid.cols}/${grid.rows};width:100%;">`);
+  lines.push(`<div class="stripe-mosaic" style="display:grid;grid-template-columns:repeat(${grid.cols},1fr);grid-template-rows:repeat(${grid.rows},1fr);aspect-ratio:${gridAspect(grid).toFixed(4)};width:100%;">`);
   for (const [r, c] of grid.cells) {
     const bg = (r + c) % 2 === 0 ? PURPLE : BROWN;
     lines.push(`<div style="grid-area:${r + 1}/${c + 1};background:${bg};transition:transform .2s;"></div>`);
