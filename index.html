@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>stripe-mosaic — SVG → 보라/갈색 셀 그리드</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <h1>stripe-mosaic</h1>
+    <p class="hint">단색 SVG를 업로드하면 보라/갈색 셀 그리드로 모자이크. 셀 단위라 가장자리 stair-step.</p>
+
+    <label class="block">
+      <span>1. SVG 파일</span>
+      <input type="file" id="file" accept=".svg,image/svg+xml" />
+    </label>
+
+    <label class="block">
+      <span>2. 셀 크기 <code id="cellv">20</code>px</span>
+      <input type="range" id="cell" min="3" max="40" value="20" step="1" />
+    </label>
+
+    <label class="block">
+      <span>3. 알파 임계값 <code id="alphav">128</code></span>
+      <input type="range" id="alpha" min="32" max="240" value="128" step="8" />
+    </label>
+
+    <div class="row">
+      <button id="copy" type="button">📋 HTML 복사</button>
+      <button id="dl" type="button">⬇ HTML 파일</button>
+    </div>
+
+    <p class="hint small">복사된 HTML은 그대로 페이지에 박을 수 있어요. <code>aspect-ratio</code>와 <code>grid</code>만 쓰니 부모 폭에 맞춰 반응형. <code>:hover</code>·<code>transition</code> 자유 추가.</p>
+
+    <details>
+      <summary>고급 — 셀 hover 효과 미리보기</summary>
+      <label class="block">
+        <input type="checkbox" id="hover" />
+        셀 hover 시 5배 확장 (사이트 띠와 동일)
+      </label>
+    </details>
+  </aside>
+
+  <main class="stage">
+    <div class="preview" id="preview"></div>
+    <p id="status" class="status"></p>
+  </main>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
