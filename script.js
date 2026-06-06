@@ -134,7 +134,7 @@ function buildHTML(grid) {
   lines.push(`<div class="stripe-mosaic" style="display:grid;grid-template-columns:repeat(${grid.cols},1fr);grid-template-rows:repeat(${grid.rows},1fr);aspect-ratio:${gridAspect(grid).toFixed(4)};width:100%;">`);
   for (const [r, c] of grid.cells) {
     const bg = (r + c) % 2 === 0 ? PURPLE : BROWN;
-    lines.push(`<div style="grid-area:${r + 1}/${c + 1};background:${bg};transition:transform .2s;"></div>`);
+    lines.push(`<div style="grid-area:${r + 1}/${c + 1};background:${bg};"></div>`);
   }
   lines.push('</div>');
   return lines.join('');
